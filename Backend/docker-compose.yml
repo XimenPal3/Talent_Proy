@@ -1,0 +1,45 @@
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: talentflow-database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-talentflow}
+      POSTGRES_USER: ${POSTGRES_USER:-talentflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-talentflow-local-demo-db}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - talentflow-postgres:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/001-talentflow.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-talentflow} -d ${POSTGRES_DB:-talentflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  backend:
+    build: .
+    container_name: talentflow-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      PORT: 3001
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      DATABASE_URL: postgres://${POSTGRES_USER:-talentflow}:${POSTGRES_PASSWORD:-talentflow-local-demo-db}@database:5432/${POSTGRES_DB:-talentflow}
+      SESSION_SECRET: ${SESSION_SECRET:-local-demo-only-change-this-session-secret-before-deployment}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@talentflow.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-TalentFlowDemo2026!}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador TalentFlow}
+      NODE_ENV: development
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  talentflow-postgres:
