@@ -9,7 +9,8 @@ TalentFlow centraliza perfiles de candidatos y vacantes para apoyar el reclutami
 - Búsqueda y filtrado de perfiles; edición de información e historial de etapas.
 - Registro y cierre/reapertura de vacantes con criterios de selección.
 - Cálculo automático de compatibilidad y asignación de candidatos.
-- Roles de Administrador, Recursos Humanos y Consulta. Los dos primeros pueden gestionar candidatos y vacantes; solo Administración puede crear usuarios y cambiar roles.
+- Roles de Administrador, Recursos Humanos, Consulta y Candidato. Los dos primeros pueden gestionar candidatos y vacantes; Consulta tiene acceso de solo lectura al sistema interno; solo Administración puede crear usuarios y cambiar roles.
+- Portal de candidato vinculado a un único perfil. El candidato solo consulta sus propias postulaciones y el historial de etapas de su perfil; no puede consultar listados, reportes ni datos de otras personas.
 - PostgreSQL local en Docker para candidatos, vacantes, usuarios, asignaciones e historial.
 - Contraseñas protegidas con bcrypt; las sesiones usan cookies `httpOnly`, `SameSite=Strict`, expiración y protección CSRF.
 
@@ -46,6 +47,8 @@ No hace falta crear una cuenta, obtener credenciales de Supabase ni conectarse a
    - Contraseña: `TalentFlowDemo2026!`
 
 La API queda en `http://localhost:3001/health`; PostgreSQL solo se publica en `127.0.0.1:5432`. Los valores del `.env.example` son para una demostración local. Cambia las contraseñas y el secreto de sesión antes de usarla en una red o despliegue real. No expongas el puerto de PostgreSQL a Internet.
+
+Para habilitar el portal de una persona candidata, inicia sesión como Administración, registra su perfil en **Candidatos** y crea una cuenta en **Usuarios y permisos** con el rol **Candidato**, vinculándola al perfil correspondiente. Comparte la contraseña inicial de forma segura. La persona candidata iniciará sesión en la misma dirección de la aplicación y verá únicamente sus postulaciones y etapas. La etapa se registra actualmente en el perfil del candidato, por lo que se comparte entre sus postulaciones.
 
 ## Configuración local
 

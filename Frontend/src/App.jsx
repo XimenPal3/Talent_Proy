@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import AuthScreen from './components/AuthScreen';
 import CandidateForm from './components/CandidateForm';
 import CandidateList, { candidateStages } from './components/CandidateList';
+import CandidatePortal from './components/CandidatePortal';
 import UserManagement from './components/UserManagement';
 import VacancyForm from './components/VacancyForm';
 import { api, setCsrfToken } from './lib/api';
 import './index.css';
 
 const normalize = (value) => String(value || '').trim().toLocaleLowerCase();
-const roleLabels = { admin: 'Administrador', hr: 'Recursos Humanos', viewer: 'Consulta' };
+const roleLabels = { admin: 'Administrador', hr: 'Recursos Humanos', viewer: 'Consulta', candidate: 'Candidato' };
 
 function calculateCompatibility(candidate, vacancy) {
   const criteria = [];
@@ -51,6 +52,7 @@ function App() {
   const [dataLoading, setDataLoading] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [candidateData, setCandidateData] = useState([]);
+  const [candidatePortalData, setCandidatePortalData] = useState(null);
   const [vacancyData, setVacancyData] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [statusHistory, setStatusHistory] = useState([]);
@@ -87,6 +89,19 @@ function App() {
     if (!session || !profile) return;
 
     let mounted = true;
+    if (profile.role === 'candidate') {
+      setDataLoading(true);
+      setError('');
+      api.get('/api/candidate/portal').then((candidate) => {
+        if (mounted) setCandidatePortalData(candidate);
+      }).catch((loadError) => {
+        if (mounted) setError(`No se pudo cargar tu proceso: ${loadError.message}`);
+      }).finally(() => {
+        if (mounted) setDataLoading(false);
+      });
+      return () => { mounted = false; };
+    }
+
     const loadData = async () => {
       setDataLoading(true);
       setError('');
@@ -237,6 +252,7 @@ function App() {
       setSession(null);
       setProfile(null);
       setCandidateData([]);
+      setCandidatePortalData(null);
       setVacancyData([]);
       setAssignments([]);
       setStatusHistory([]);
@@ -566,6 +582,22 @@ function App() {
     return <div className="loading-screen">Conectando con TalentFlow...</div>;
   }
   if (!session) return <AuthScreen onLogin={handleLogin} backendError={error} />;
+  if (profile?.role === 'candidate') {
+    return (
+      <main className="candidate-portal-shell">
+        {dataLoading && <p className="notice">Cargando tu proceso...</p>}
+        {error && (
+          <div className="candidate-portal-error">
+            <p className="error-notice" role="alert">{error}</p>
+            <button className="secondary-button" onClick={signOut}>Cerrar sesión</button>
+          </div>
+        )}
+        {candidatePortalData && !dataLoading && !error && (
+          <CandidatePortal candidate={candidatePortalData} onSignOut={signOut} />
+        )}
+      </main>
+    );
+  }
 
   return (
     <div className="app-shell">

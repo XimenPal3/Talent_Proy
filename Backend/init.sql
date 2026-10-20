@@ -5,7 +5,7 @@ create table if not exists users (
   email text not null unique,
   full_name text not null check (length(trim(full_name)) > 0),
   password_hash text not null,
-  role text not null default 'viewer' check (role in ('admin', 'hr', 'viewer')),
+  role text not null default 'viewer',
   created_at timestamptz not null default now()
 );
 
@@ -27,6 +27,15 @@ create table if not exists candidates (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table users add column if not exists candidate_id uuid references candidates (id) on delete set null;
+alter table users drop constraint if exists users_role_check;
+alter table users add constraint users_role_check
+  check (role in ('admin', 'hr', 'viewer', 'candidate'));
+alter table users drop constraint if exists users_candidate_role_check;
+alter table users add constraint users_candidate_role_check
+  check ((role = 'candidate' and candidate_id is not null) or (role <> 'candidate' and candidate_id is null));
+create unique index if not exists users_candidate_id_unique_idx on users (candidate_id);
 
 create table if not exists vacancies (
   id uuid primary key default gen_random_uuid(),

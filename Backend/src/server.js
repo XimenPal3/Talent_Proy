@@ -42,7 +42,7 @@ const validEmail = (email) => typeof email === 'string'
   && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   && email.length <= 254;
 const validUuid = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-const roles = new Set(['admin', 'hr', 'viewer']);
+const roles = new Set(['admin', 'hr', 'viewer', 'candidate']);
 const stages = new Set(['Recepción', 'Filtro inicial', 'Entrevista', 'Evaluación', 'Oferta', 'Contratado', 'Rechazado']);
 
 const csrfToken = (req) => {
@@ -68,7 +68,7 @@ const requireCsrf = (req, res, next) => {
 const requireAuth = asyncRoute(async (req, res, next) => {
   if (!req.session.userId) return res.status(401).json({ error: 'Inicia sesión para continuar.' });
   const { rows } = await pool.query(
-    'select id, email, full_name, role from users where id = $1',
+    'select id, email, full_name, role, candidate_id from users where id = $1',
     [req.session.userId],
   );
   if (!rows[0]) {
@@ -228,7 +228,7 @@ app.post('/api/auth/logout', requireCsrf, requireAuth, (req, res, next) => {
   });
 });
 
-app.get('/api/candidates', requireAuth, asyncRoute(async (_req, res) => {
+app.get('/api/candidates', requireAuth, requireRole('admin', 'hr', 'viewer'), asyncRoute(async (_req, res) => {
   const { rows } = await pool.query('select * from candidates order by created_at desc');
   res.json(rows);
 }));
@@ -281,12 +281,12 @@ app.patch('/api/candidates/:id/status', requireAuth, requireRole('admin', 'hr'),
   } finally { client.release(); }
 }));
 
-app.get('/api/candidates/history', requireAuth, asyncRoute(async (_req, res) => {
+app.get('/api/candidates/history', requireAuth, requireRole('admin', 'hr', 'viewer'), asyncRoute(async (_req, res) => {
   const { rows } = await pool.query('select * from candidate_status_history order by changed_at asc');
   res.json(rows);
 }));
 
-app.get('/api/vacancies', requireAuth, asyncRoute(async (_req, res) => {
+app.get('/api/vacancies', requireAuth, requireRole('admin', 'hr', 'viewer'), asyncRoute(async (_req, res) => {
   const { rows } = await pool.query('select * from vacancies order by created_at desc');
   res.json(rows);
 }));
@@ -331,7 +331,39 @@ app.patch('/api/vacancies/:id/status', requireAuth, requireRole('admin', 'hr'), 
   } catch (error) { withDatabaseError(res, error); }
 }));
 
-app.get('/api/assignments', requireAuth, asyncRoute(async (_req, res) => {
+app.get('/api/candidate/portal', requireAuth, requireRole('candidate'), asyncRoute(async (req, res) => {
+  const candidateId = req.user.candidate_id;
+  if (!candidateId) return res.status(403).json({ error: 'La cuenta no está vinculada a un perfil de candidato.' });
+
+  const { rows } = await pool.query(
+    `select c.id, c.full_name, c.email, c.phone, c.desired_role, c.years_experience, c.education,
+            c.location, c.skills, c.certifications, c.experience_summary, c.status,
+            coalesce((
+              select json_agg(json_build_object(
+                'title', v.title,
+                'department', v.department,
+                'mode', v.mode,
+                'vacancy_status', v.status,
+                'assigned_at', a.assigned_at
+              ) order by a.assigned_at desc)
+              from assignments a
+              join vacancies v on v.id = a.vacancy_id
+              where a.candidate_id = c.id
+            ), '[]'::json) as applications,
+            coalesce((
+              select json_agg(json_build_object('status', h.status, 'changed_at', h.changed_at) order by h.changed_at asc)
+              from candidate_status_history h
+              where h.candidate_id = c.id
+            ), '[]'::json) as status_history
+     from candidates c
+     where c.id = $1`,
+    [candidateId],
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'No se encontró el perfil asociado a esta cuenta.' });
+  res.json(rows[0]);
+}));
+
+app.get('/api/assignments', requireAuth, requireRole('admin', 'hr', 'viewer'), asyncRoute(async (_req, res) => {
   const { rows } = await pool.query('select id, candidate_id, vacancy_id, assigned_at from assignments order by assigned_at desc');
   res.json(rows);
 }));
@@ -351,12 +383,15 @@ app.post('/api/assignments', requireAuth, requireRole('admin', 'hr'), requireCsr
 }));
 
 app.get('/api/admin/users', requireAuth, requireRole('admin'), asyncRoute(async (_req, res) => {
-  const { rows } = await pool.query('select id, email, full_name, role, created_at from users order by created_at');
+  const { rows } = await pool.query(
+    `select u.id, u.email, u.full_name, u.role, u.candidate_id, c.full_name as candidate_name, u.created_at
+     from users u left join candidates c on c.id = u.candidate_id order by u.created_at`,
+  );
   res.json(rows);
 }));
 
 app.post('/api/admin/users', requireAuth, requireRole('admin'), requireCsrf, asyncRoute(async (req, res) => {
-  const { email: rawEmail, full_name: fullName, password, role } = req.body || {};
+  const { email: rawEmail, full_name: fullName, password, role, candidate_id: candidateId } = req.body || {};
   const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
   if (!validEmail(email) || typeof fullName !== 'string' || !fullName.trim() || fullName.trim().length > 120) {
     return res.status(400).json({ error: 'Indica un nombre y correo electrónico válidos.' });
@@ -364,14 +399,22 @@ app.post('/api/admin/users', requireAuth, requireRole('admin'), requireCsrf, asy
   if (typeof password !== 'string' || password.length < 12 || password.length > 200) {
     return res.status(400).json({ error: 'La contraseña debe tener entre 12 y 200 caracteres.' });
   }
-  if (!['hr', 'viewer'].includes(role)) {
-    return res.status(400).json({ error: 'El rol para nuevos usuarios debe ser Recursos Humanos o Consulta.' });
+  if (!['hr', 'viewer', 'candidate'].includes(role)) {
+    return res.status(400).json({ error: 'El rol para nuevos usuarios no es válido.' });
+  }
+  if (role === 'candidate' && !validUuid(candidateId)) {
+    return res.status(400).json({ error: 'Selecciona el perfil de candidato que se vinculará a esta cuenta.' });
+  }
+  if (role !== 'candidate' && candidateId) {
+    return res.status(400).json({ error: 'Solo las cuentas de candidato pueden vincularse a un perfil.' });
   }
   try {
     const hash = await bcrypt.hash(password, 12);
     const { rows } = await pool.query(
-      'insert into users (email, full_name, password_hash, role) values ($1,$2,$3,$4) returning id,email,full_name,role,created_at',
-      [email, fullName.trim(), hash, role],
+      `insert into users (email, full_name, password_hash, role, candidate_id)
+       values ($1,$2,$3,$4,$5)
+       returning id,email,full_name,role,candidate_id,created_at`,
+      [email, fullName.trim(), hash, role, role === 'candidate' ? candidateId : null],
     );
     res.status(201).json(rows[0]);
   } catch (error) { withDatabaseError(res, error); }
@@ -385,8 +428,16 @@ app.patch('/api/admin/users/:id/role', requireAuth, requireRole('admin'), requir
     return res.status(400).json({ error: 'No puedes quitarte a ti mismo el rol de administrador.' });
   }
   try {
+    if (role === 'candidate') {
+      const { rows: currentUsers } = await pool.query('select candidate_id from users where id=$1', [id]);
+      if (!currentUsers[0]) return res.status(404).json({ error: 'No se encontró el usuario.' });
+      if (!currentUsers[0].candidate_id) {
+        return res.status(400).json({ error: 'Para asignar el rol Candidato, crea la cuenta desde un perfil vinculado.' });
+      }
+    }
     const { rows } = await pool.query(
-      'update users set role=$1 where id=$2 returning id,email,full_name,role,created_at',
+      `update users set role=$1, candidate_id=case when $1='candidate' then candidate_id else null end
+       where id=$2 returning id,email,full_name,role,candidate_id,created_at`,
       [role, id],
     );
     if (!rows[0]) return res.status(404).json({ error: 'No se encontró el usuario.' });
@@ -401,6 +452,24 @@ app.use((error, _req, res, _next) => {
 
 const start = async () => {
   await pool.query('select 1');
+  const migration = await pool.connect();
+  try {
+    await migration.query('begin');
+    await migration.query('alter table users add column if not exists candidate_id uuid references candidates(id) on delete set null');
+    await migration.query('alter table users drop constraint if exists users_role_check');
+    await migration.query("alter table users add constraint users_role_check check (role in ('admin', 'hr', 'viewer', 'candidate'))");
+    await migration.query('alter table users drop constraint if exists users_candidate_role_check');
+    await migration.query(
+      "alter table users add constraint users_candidate_role_check check ((role = 'candidate' and candidate_id is not null) or (role <> 'candidate' and candidate_id is null))",
+    );
+    await migration.query('create unique index if not exists users_candidate_id_unique_idx on users(candidate_id)');
+    await migration.query('commit');
+  } catch (error) {
+    await migration.query('rollback');
+    throw error;
+  } finally {
+    migration.release();
+  }
   const adminEmail = (process.env.ADMIN_EMAIL || 'admin@talentflow.local').trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD || 'TalentFlowDemo2026!';
   const adminName = process.env.ADMIN_NAME || 'Administrador TalentFlow';

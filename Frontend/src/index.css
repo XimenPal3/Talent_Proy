@@ -133,6 +133,28 @@ textarea { font: inherit; }
 .auth-form input { border: 1px solid rgba(255,255,255,0.12); background: rgba(2,6,23,0.45); color: white; border-radius: 10px; padding: 10px 12px; }
 .auth-form button { border: 0; border-radius: 999px; padding: 10px 14px; background: #2563eb; color: white; cursor: pointer; }
 .auth-message { margin-top: 12px; color: #fda4af; font-size: 0.95rem; }
+.candidate-portal-shell { min-height: 100vh; padding: clamp(20px, 5vw, 64px); }
+.candidate-portal { width: min(920px, 100%); margin: 0 auto; }
+.candidate-portal-header, .candidate-process-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.candidate-portal-header { margin-bottom: 24px; }
+.candidate-portal-header h1, .candidate-process-heading h2 { margin: 0; }
+.candidate-portal-header p:not(.eyebrow) { margin: 8px 0 0; color: #94a3b8; }
+.candidate-process-card { padding: clamp(20px, 4vw, 32px); }
+.candidate-process-heading { align-items: center; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.candidate-applications { display: grid; gap: 12px; margin-top: 20px; }
+.candidate-application { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; background: rgba(255,255,255,0.025); }
+.candidate-application h3, .candidate-application p { margin: 0; }
+.candidate-application h3 { margin-bottom: 4px; }
+.candidate-application p, .candidate-application-status small { color: #94a3b8; }
+.candidate-application-status { display: grid; justify-items: end; gap: 8px; text-align: right; }
+.candidate-process-history { margin-top: 24px; }
+.candidate-process-history h3 { margin: 0 0 12px; }
+.candidate-process-history ol { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.candidate-process-history li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.candidate-process-history time, .candidate-portal-empty, .candidate-portal-note { color: #94a3b8; }
+.candidate-portal-empty { line-height: 1.65; }
+.candidate-portal-note { margin: 24px 0 0; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.9rem; }
+.candidate-portal-error { max-width: 600px; margin: 0 auto; }
 
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; }
@@ -146,6 +168,8 @@ textarea { font: inherit; }
   .section-title { align-items: flex-start; flex-direction: column; }
   .vacancy-page-heading { align-items: flex-start; flex-direction: column; }
   .vacancy-toolbar { align-items: flex-start; flex-direction: column; }
+  .candidate-portal-header, .candidate-process-heading, .candidate-application, .candidate-process-history li { align-items: flex-start; flex-direction: column; }
+  .candidate-application-status { justify-items: start; text-align: left; }
   .timeline-item { grid-template-columns: 95px 1fr 36px; }
   .history-list li, .user-row { align-items: flex-start; flex-direction: column; }
   .vacancy-fields { grid-template-columns: minmax(0, 1fr); gap: 12px; }
