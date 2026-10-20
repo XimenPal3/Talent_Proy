@@ -58,7 +58,10 @@ function App() {
   const [skillFilter, setSkillFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingCandidate, setEditingCandidate] = useState(null);
+  const [isCandidateFormOpen, setIsCandidateFormOpen] = useState(false);
   const [editingVacancy, setEditingVacancy] = useState(null);
+  const [isVacancyFormOpen, setIsVacancyFormOpen] = useState(false);
+  const [vacancyStatusFilter, setVacancyStatusFilter] = useState('Abierta');
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
@@ -181,6 +184,7 @@ function App() {
         ? previous.map((item) => item.id === saved.id ? saved : item)
         : [saved, ...previous]);
       setEditingCandidate(null);
+      setIsCandidateFormOpen(false);
     }
     return Boolean(saved);
   };
@@ -214,6 +218,7 @@ function App() {
         ? previous.map((item) => item.id === saved.id ? saved : item)
         : [saved, ...previous]);
       setEditingVacancy(null);
+      setIsVacancyFormOpen(false);
     }
     return Boolean(saved);
   };
@@ -298,72 +303,171 @@ function App() {
 
   const renderCandidates = () => (
     <div className="content-card">
-      <div className="section-title">
-        <div><p className="eyebrow">Gestión de talento</p><h2>Perfiles de candidatos</h2></div>
-      </div>
-      {canManage && (
+      {isCandidateFormOpen ? (
+        <>
+          <div className="vacancy-page-heading">
+            <div>
+              <p className="eyebrow">Gestión de talento</p>
+              <h2>{editingCandidate ? 'Editar candidato' : 'Registrar candidato'}</h2>
+              <p className="vacancy-page-description">Completa la información de contacto, perfil y experiencia.</p>
+            </div>
+          </div>
         <CandidateForm
           key={editingCandidate?.id || 'new-candidate'}
           candidate={editingCandidate}
           onSaveCandidate={saveCandidate}
-          onCancel={() => setEditingCandidate(null)}
+          onCancel={() => {
+            setEditingCandidate(null);
+            setIsCandidateFormOpen(false);
+          }}
         />
+        </>
+      ) : (
+        <>
+          <div className="vacancy-page-heading">
+            <div>
+              <p className="eyebrow">Gestión de talento</p>
+              <h2>Perfiles de candidatos</h2>
+              <p className="vacancy-page-description">Consulta y administra los perfiles registrados en el proceso de selección.</p>
+            </div>
+            {canManage && (
+              <button
+                className="primary-button vacancy-create-button"
+                onClick={() => {
+                  setEditingCandidate(null);
+                  setIsCandidateFormOpen(true);
+                }}
+              >
+                <span aria-hidden="true">+</span> Agregar candidato
+              </button>
+            )}
+          </div>
+          <div className="filters">
+            <input type="search" placeholder="Buscar por nombre, puesto, formación o certificación" value={search} onChange={(event) => setSearch(event.target.value)} />
+            <select value={skillFilter} onChange={(event) => setSkillFilter(event.target.value)}>
+              {skillOptions.map((skill) => <option key={skill} value={skill}>{skill === 'all' ? 'Todas las habilidades' : skill}</option>)}
+            </select>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              {statusOptions.map((status) => <option key={status} value={status}>{status === 'all' ? 'Todas las etapas' : status}</option>)}
+            </select>
+          </div>
+          <CandidateList
+            candidates={filteredCandidates}
+            canManage={canManage}
+            onEdit={(candidate) => {
+              setEditingCandidate(candidate);
+              setIsCandidateFormOpen(true);
+            }}
+            onStatusChange={changeCandidateStatus}
+            statusHistory={statusHistory}
+          />
+        </>
       )}
-      <div className="filters">
-        <input type="search" placeholder="Buscar por nombre, puesto, formación o certificación" value={search} onChange={(event) => setSearch(event.target.value)} />
-        <select value={skillFilter} onChange={(event) => setSkillFilter(event.target.value)}>
-          {skillOptions.map((skill) => <option key={skill} value={skill}>{skill === 'all' ? 'Todas las habilidades' : skill}</option>)}
-        </select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          {statusOptions.map((status) => <option key={status} value={status}>{status === 'all' ? 'Todas las etapas' : status}</option>)}
-        </select>
-      </div>
-      <CandidateList
-        candidates={filteredCandidates}
-        canManage={canManage}
-        onEdit={setEditingCandidate}
-        onStatusChange={changeCandidateStatus}
-        statusHistory={statusHistory}
-      />
     </div>
   );
 
-  const renderVacancies = () => (
+  const renderVacancies = () => {
+    const visibleVacancies = vacancyStatusFilter === 'Todas'
+      ? vacancyMatches
+      : vacancyMatches.filter((vacancy) => vacancy.status === vacancyStatusFilter);
+    const openVacancyCount = vacancyData.filter((vacancy) => vacancy.status === 'Abierta').length;
+
+    return (
     <div className="content-card">
-      <div className="section-title">
-        <div><p className="eyebrow">Requerimientos y asignación</p><h2>Vacantes</h2></div>
-      </div>
-      {canManage && (
+      {isVacancyFormOpen ? (
+        <>
+          <div className="section-title vacancy-page-heading">
+            <div>
+              <p className="eyebrow">Requerimientos y asignación</p>
+              <h2>{editingVacancy ? 'Editar vacante' : 'Crear vacante'}</h2>
+              <p className="vacancy-page-description">Completa los datos del puesto y define sus requisitos.</p>
+            </div>
+          </div>
         <VacancyForm
           key={editingVacancy?.id || 'new-vacancy'}
           vacancy={editingVacancy}
           onSaveVacancy={saveVacancy}
-          onCancel={() => setEditingVacancy(null)}
+          onCancel={() => {
+            setEditingVacancy(null);
+            setIsVacancyFormOpen(false);
+          }}
         />
-      )}
-      <p className="empty-state">
-        La compatibilidad se calcula automáticamente con habilidades, experiencia, certificaciones y formación indicadas en la vacante; se destacan perfiles con al menos 60%.
-      </p>
-      <div className="vacancy-grid">
-        {vacancyMatches.map((vacancy) => {
+        </>
+      ) : (
+        <>
+          <div className="vacancy-page-heading">
+            <div>
+              <p className="eyebrow">Requerimientos y asignación</p>
+              <h2>Vacantes disponibles</h2>
+              <p className="vacancy-page-description">
+                Consulta los puestos abiertos y revisa los perfiles que mejor se ajustan a cada uno.
+              </p>
+            </div>
+            {canManage && (
+              <button
+                className="primary-button vacancy-create-button"
+                onClick={() => {
+                  setEditingVacancy(null);
+                  setIsVacancyFormOpen(true);
+                }}
+              >
+                <span aria-hidden="true">+</span> Crear vacante
+              </button>
+            )}
+          </div>
+          <div className="vacancy-toolbar">
+            <div className="vacancy-filters" aria-label="Filtrar vacantes">
+              {[
+                { label: 'Abiertas', value: 'Abierta', count: openVacancyCount },
+                { label: 'Todas', value: 'Todas', count: vacancyData.length },
+              ].map((filter) => (
+                <button
+                  key={filter.value}
+                  className={`vacancy-filter-button${vacancyStatusFilter === filter.value ? ' active' : ''}`}
+                  type="button"
+                  aria-pressed={vacancyStatusFilter === filter.value}
+                  onClick={() => setVacancyStatusFilter(filter.value)}
+                >
+                  {filter.label}<span>{filter.count}</span>
+                </button>
+              ))}
+            </div>
+            <p className="vacancy-compatibility-note">
+              La compatibilidad se calcula automáticamente y destaca perfiles con al menos 60%.
+            </p>
+          </div>
+          <div className="vacancy-grid">
+            {visibleVacancies.map((vacancy) => {
           const assignedIds = assignments.filter((assignment) => assignment.vacancy_id === vacancy.id).map((assignment) => assignment.candidate_id);
           return (
             <article key={vacancy.id} className="vacancy-card">
               <div className="candidate-top">
                 <div><h3>{vacancy.title}</h3><p>{vacancy.department || 'Departamento no indicado'}</p></div>
-                <span className="status-pill">{vacancy.status}</span>
+                <span className={`status-pill${vacancy.status === 'Cerrada' ? ' status-pill--closed' : ''}`}>{vacancy.status}</span>
               </div>
-              <ul>
-                {vacancy.mode && <li>Modalidad: {vacancy.mode}</li>}
-                <li>Experiencia mínima: {vacancy.min_experience}+ años</li>
-                {vacancy.required_education && <li>Formación: {vacancy.required_education}</li>}
-                {vacancy.required_skills?.length > 0 && <li>Habilidades: {vacancy.required_skills.join(', ')}</li>}
-                {vacancy.required_certifications?.length > 0 && <li>Certificaciones: {vacancy.required_certifications.join(', ')}</li>}
-              </ul>
-              {vacancy.description && <p>{vacancy.description}</p>}
+              <div className="vacancy-facts">
+                {vacancy.mode && <span>{vacancy.mode}</span>}
+                <span>{vacancy.min_experience}+ años de experiencia</span>
+              </div>
+              {(vacancy.required_education || vacancy.required_skills?.length > 0 || vacancy.required_certifications?.length > 0) && (
+                <dl className="vacancy-requirements">
+                  {vacancy.required_education && <div><dt>Formación</dt><dd>{vacancy.required_education}</dd></div>}
+                  {vacancy.required_skills?.length > 0 && <div><dt>Habilidades</dt><dd>{vacancy.required_skills.join(', ')}</dd></div>}
+                  {vacancy.required_certifications?.length > 0 && <div><dt>Certificaciones</dt><dd>{vacancy.required_certifications.join(', ')}</dd></div>}
+                </dl>
+              )}
+              {vacancy.description && <p className="vacancy-description">{vacancy.description}</p>}
               {canManage && (
                 <div className="form-actions">
-                  <button className="secondary-button" onClick={() => setEditingVacancy(vacancy)}>Editar criterios</button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => {
+                      setEditingVacancy(vacancy);
+                      setIsVacancyFormOpen(true);
+                    }}
+                  >
+                    Editar vacante
+                  </button>
                   <button
                     className="secondary-button"
                     onClick={() => updateVacancyStatus(vacancy.id, vacancy.status === 'Abierta' ? 'Cerrada' : 'Abierta')}
@@ -399,11 +503,30 @@ function App() {
               )}
             </article>
           );
-        })}
-        {!vacancyData.length && <p className="empty-state">Aún no hay vacantes registradas.</p>}
-      </div>
+            })}
+            {!visibleVacancies.length && (
+              <div className="vacancy-empty-state">
+                <h3>{vacancyStatusFilter === 'Abierta' ? 'No hay vacantes abiertas' : 'Aún no hay vacantes'}</h3>
+                <p>{vacancyStatusFilter === 'Abierta' ? 'Las vacantes abiertas aparecerán aquí para que puedas consultarlas.' : 'Crea una vacante para comenzar a organizar tu proceso de selección.'}</p>
+                {canManage && vacancyStatusFilter === 'Abierta' && (
+                  <button
+                    className="primary-button"
+                    onClick={() => {
+                      setEditingVacancy(null);
+                      setIsVacancyFormOpen(true);
+                    }}
+                  >
+                    Crear vacante
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
-  );
+    );
+  };
 
   const renderReports = () => (
     <div className="content-card">

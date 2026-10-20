@@ -46,21 +46,60 @@ function VacancyForm({ vacancy, onSaveVacancy, onCancel }) {
   };
 
   return (
-    <form className="panel" onSubmit={handleSubmit}>
+    <form className="panel vacancy-form" onSubmit={handleSubmit}>
       <h3>{vacancy ? 'Editar vacante' : 'Registrar vacante'}</h3>
-      <div className="filters">
-        <input name="title" placeholder="Título del puesto" value={formData.title} onChange={handleChange} required maxLength="150" />
-        <input name="department" placeholder="Departamento" value={formData.department} onChange={handleChange} />
-        <input name="mode" placeholder="Modalidad" value={formData.mode} onChange={handleChange} />
-        <input name="min_experience" type="number" min="0" step="0.5" placeholder="Experiencia mínima (años)" value={formData.min_experience} onChange={handleChange} required />
-        <input name="required_skills" placeholder="Habilidades requeridas (separadas por coma)" value={formData.required_skills} onChange={handleChange} />
-        <input name="required_certifications" placeholder="Certificaciones requeridas (separadas por coma)" value={formData.required_certifications} onChange={handleChange} />
-        <input name="required_education" placeholder="Formación académica requerida" value={formData.required_education} onChange={handleChange} />
-        <textarea name="description" placeholder="Descripción y otros requisitos" value={formData.description} onChange={handleChange} rows="3" />
-      </div>
+      <fieldset className="vacancy-form-section">
+        <legend>Información del puesto</legend>
+        <div className="vacancy-fields">
+          <label className="vacancy-field">
+            <span>Título del puesto <span className="required-mark" aria-hidden="true">*</span></span>
+            <input name="title" value={formData.title} onChange={handleChange} required maxLength="150" />
+          </label>
+          <label className="vacancy-field">
+            <span>Departamento</span>
+            <input name="department" value={formData.department} onChange={handleChange} />
+          </label>
+          <label className="vacancy-field">
+            <span>Modalidad</span>
+            <input name="mode" value={formData.mode} onChange={handleChange} />
+          </label>
+          <label className="vacancy-field">
+            <span>Experiencia mínima (años) <span className="required-mark" aria-hidden="true">*</span></span>
+            <input name="min_experience" type="number" min="0" step="0.5" value={formData.min_experience} onChange={handleChange} required />
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="vacancy-form-section">
+        <legend>Requisitos del puesto</legend>
+        <div className="vacancy-fields">
+          <label className="vacancy-field">
+            <span>Habilidades requeridas</span>
+            <textarea name="required_skills" value={formData.required_skills} onChange={handleChange} rows="4" aria-describedby="skills-hint" />
+            <small id="skills-hint">Separa cada habilidad con una coma.</small>
+          </label>
+          <label className="vacancy-field">
+            <span>Certificaciones requeridas</span>
+            <textarea name="required_certifications" value={formData.required_certifications} onChange={handleChange} rows="4" aria-describedby="certifications-hint" />
+            <small id="certifications-hint">Separa cada certificación con una coma.</small>
+          </label>
+          <label className="vacancy-field vacancy-field--full">
+            <span>Formación académica requerida</span>
+            <textarea name="required_education" value={formData.required_education} onChange={handleChange} rows="3" />
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="vacancy-form-section">
+        <legend>Descripción</legend>
+        <div className="vacancy-fields">
+          <label className="vacancy-field vacancy-field--full">
+            <span>Descripción y otros requisitos</span>
+            <textarea name="description" value={formData.description} onChange={handleChange} rows="5" />
+          </label>
+        </div>
+      </fieldset>
       <div className="form-actions">
         <button className="primary-button" type="submit">{vacancy ? 'Guardar cambios' : 'Guardar vacante'}</button>
-        {vacancy && <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>}
+        <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>
       </div>
     </form>
   );

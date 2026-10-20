@@ -50,23 +50,63 @@ function CandidateForm({ candidate, onSaveCandidate, onCancel }) {
   };
 
   return (
-    <form className="panel" onSubmit={handleSubmit}>
+    <form className="panel candidate-form" onSubmit={handleSubmit}>
       <h3>{candidate ? 'Editar perfil de candidato' : 'Registrar candidato'}</h3>
-      <div className="filters">
-        <input name="full_name" placeholder="Nombre completo" value={formData.full_name} onChange={handleChange} required maxLength="150" />
-        <input name="email" type="email" placeholder="Correo electrónico" value={formData.email} onChange={handleChange} />
-        <input name="phone" type="tel" placeholder="Teléfono" value={formData.phone} onChange={handleChange} />
-        <input name="desired_role" placeholder="Puesto de interés" value={formData.desired_role} onChange={handleChange} required maxLength="150" />
-        <input name="years_experience" type="number" min="0" step="0.5" placeholder="Años de experiencia" value={formData.years_experience} onChange={handleChange} required />
-        <input name="education" placeholder="Formación académica" value={formData.education} onChange={handleChange} />
-        <input name="location" placeholder="Ubicación" value={formData.location} onChange={handleChange} />
-        <input name="skills" placeholder="Habilidades separadas por coma" value={formData.skills} onChange={handleChange} />
-        <input name="certifications" placeholder="Certificaciones separadas por coma" value={formData.certifications} onChange={handleChange} />
-        <textarea name="experience_summary" placeholder="Resumen de experiencia laboral" value={formData.experience_summary} onChange={handleChange} rows="3" />
-      </div>
+      <fieldset className="form-section">
+        <legend>Información personal y de contacto</legend>
+        <div className="vacancy-fields">
+          <label className="vacancy-field">
+            <span>Nombre completo <span className="required-mark" aria-hidden="true">*</span></span>
+            <input name="full_name" value={formData.full_name} onChange={handleChange} required maxLength="150" />
+          </label>
+          <label className="vacancy-field">
+            <span>Correo electrónico</span>
+            <input name="email" type="email" value={formData.email} onChange={handleChange} />
+          </label>
+          <label className="vacancy-field">
+            <span>Teléfono</span>
+            <input name="phone" type="tel" value={formData.phone} onChange={handleChange} />
+          </label>
+          <label className="vacancy-field">
+            <span>Ubicación</span>
+            <input name="location" value={formData.location} onChange={handleChange} />
+          </label>
+        </div>
+      </fieldset>
+      <fieldset className="form-section">
+        <legend>Perfil profesional</legend>
+        <div className="vacancy-fields">
+          <label className="vacancy-field">
+            <span>Puesto de interés <span className="required-mark" aria-hidden="true">*</span></span>
+            <input name="desired_role" value={formData.desired_role} onChange={handleChange} required maxLength="150" />
+          </label>
+          <label className="vacancy-field">
+            <span>Años de experiencia <span className="required-mark" aria-hidden="true">*</span></span>
+            <input name="years_experience" type="number" min="0" step="0.5" value={formData.years_experience} onChange={handleChange} required />
+          </label>
+          <label className="vacancy-field vacancy-field--full">
+            <span>Formación académica</span>
+            <textarea name="education" value={formData.education} onChange={handleChange} rows="3" />
+          </label>
+          <label className="vacancy-field">
+            <span>Habilidades</span>
+            <textarea name="skills" value={formData.skills} onChange={handleChange} rows="4" aria-describedby="candidate-skills-hint" />
+            <small id="candidate-skills-hint">Separa cada habilidad con una coma.</small>
+          </label>
+          <label className="vacancy-field">
+            <span>Certificaciones</span>
+            <textarea name="certifications" value={formData.certifications} onChange={handleChange} rows="4" aria-describedby="candidate-certifications-hint" />
+            <small id="candidate-certifications-hint">Separa cada certificación con una coma.</small>
+          </label>
+          <label className="vacancy-field vacancy-field--full">
+            <span>Resumen de experiencia laboral</span>
+            <textarea name="experience_summary" value={formData.experience_summary} onChange={handleChange} rows="5" />
+          </label>
+        </div>
+      </fieldset>
       <div className="form-actions">
         <button className="primary-button" type="submit">{candidate ? 'Guardar cambios' : 'Guardar candidato'}</button>
-        {candidate && <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>}
+        <button className="secondary-button" type="button" onClick={onCancel}>Cancelar</button>
       </div>
     </form>
   );
